@@ -9,10 +9,7 @@
 # line1.value
 # line1.active
 # line1.temperature
-# line1.humidity
-
-
-virtualmode = True
+# line1.moisture
 
 line1_mode = "manu"
 line2_mode = "manu"
@@ -30,6 +27,13 @@ line1_auto_sensitivity = 500
 line2_auto_sensitivity = 500
 line3_auto_sensitivity = 500
 
+line1_humidity = 0
+line2_humidity = 0
+line3_humidity = 0
+
+line1_temperature = 0.0
+line2_temperature = 0.0
+line3_temperature = 0.0
 
 
 import schedule # for running cron like tasks (schedule.readthedocs.io)
@@ -38,6 +42,8 @@ import sys  # for exiting the code if an error occurs
 import paho.mqtt.client as mqtt #for processing mqtt messages
 import csv # for importing the mqtt credentials
 import configparser #for reading the configuration file
+import chirp_modbus #for interfacing with the chirp moisture sensors
+import random #for generating arbitrary numbers in sim mode
 
 config = configparser.ConfigParser()
 config.read('snet-sprinkler.conf')
@@ -45,20 +51,105 @@ config.read('snet-sprinkler.conf')
 mqttpublishstatus = config['MQTT Settings']['domain'] + "/" + config['MQTT Settings']['hostname'] + "/status"
 mqttpublishdebug = config['MQTT Settings']['domain'] + "/" + config['MQTT Settings']['hostname'] + "/debug"
 
-if virtualmode == False:
+if ('address_sensor_1' in config['RS485 Soil Moisture Sensors']):
+    sensor_line1 = chirp_modbus.SoilMoistureSensor(address=config['RS485 Soil Moisture Sensors'].getint('address_sensor_1'), serialport=config['RS485 Soil Moisture Sensors']['port'])
+if ('address_sensor_2' in config['RS485 Soil Moisture Sensors']):
+    sensor_line2 = chirp_modbus.SoilMoistureSensor(address=config['RS485 Soil Moisture Sensors'].getint('address_sensor_2'), serialport=config['RS485 Soil Moisture Sensors']['port'])
+if ('address_sensor_3' in config['RS485 Soil Moisture Sensors']):
+    sensor_line3 = chirp_modbus.SoilMoistureSensor(address=config['RS485 Soil Moisture Sensors'].getint('address_sensor_3'), serialport=config['RS485 Soil Moisture Sensors']['port'])
+
+if (config['Simulation Mode'].getboolean('sim_relay_board') == False):
     print ("Setting up GPIO pins...")
-    print ("Setting up RS485 connections...")
-    import chirp_modbus
-    line1_sensor = chirp_modbus.SoilMoistureSensor(address=1, serialport='/dev/ttyUSB0')
-    try:
-        line1_sensor.getMoisture()
-        line1_sensor.getTemperature()
-    except (IOError, ValueError):
-        print("Error reading sensor data...")
-elif virtualmode == True:
-    print("Entering simulation mode...")
+else:
+    print ("Entering GPIO simulation mode...")
+
 mqttclient = mqtt.Client("snet-sprinkler")
 todolist_time = dict()
+
+
+
+
+
+
+def read_moisture_sensors():
+    global line1_humidity
+    global line2_humidity
+    global line3_humidity
+    global line1_temperature
+    global line2_temperature
+    global line3_temperature
+
+    if ('address_sensor_1' in config['RS485 Soil Moisture Sensors']):
+        if (config['Simulation Mode'].getboolean('sim_moisture_sensors') == False):
+            print("Reading sensor_line1..." )
+            try:
+                line1_act_humidity = sensor_line1.getMoisture()
+                line1_act_temperature = sensor_line1.getTemperature()
+                print("Moisture line1 =", line1_act_humidity, " Temperature line1 =", line1_act_temperature)
+            except (IOError, ValueError):
+                print("Error reading sensor_line1")
+        else:
+            print("Pretending to read sensor_line1...")
+            line1_act_humidity = random.randrange(200, 300, 1)
+            line1_act_temperature = random.randrange(200, 250, 1) / 10
+        if ('line1_act_humidity' in locals()):
+            if (abs(line1_act_humidity - line1_humidity) > config['RS485 Soil Moisture Sensors'].getint('sensor_threshold_moisture')):
+                line1_humidity = line1_act_humidity
+                mqttpublishstring = mqttpublishstatus + "/" + "line1" + "/" + "moisture"
+                mqttclient.publish(mqttpublishstring,line1_humidity)
+        if ('line1_act_temperature' in locals()):
+            if (abs(line1_act_temperature - line1_temperature) > config['RS485 Soil Moisture Sensors'].getfloat('sensor_threshold_temperature')):
+                line1_temperature = line1_act_temperature
+                mqttpublishstring = mqttpublishstatus + "/" + "line1" + "/" + "temperature"
+                mqttclient.publish(mqttpublishstring,line1_temperature)
+
+    if ('address_sensor_2' in config['RS485 Soil Moisture Sensors']):
+        if (config['Simulation Mode'].getboolean('sim_moisture_sensors') == False):
+            print("Reading sensor_line2..." )
+            try:
+                line2_act_humidity = sensor_line2.getMoisture()
+                line2_act_temperature = sensor_line2.getTemperature()
+                print("Moisture line2 =", line2_act_humidity, " Temperature line2 =", line2_act_temperature)
+            except (IOError, ValueError):
+                print("Error reading sensor_line2")
+        else:
+            print("Pretending to read sensor_line2...")
+            line2_act_humidity = random.randrange(200, 300, 1)
+            line2_act_temperature = random.randrange(200, 250, 1) / 10
+        if ('line2_act_humidity' in locals()):
+            if (abs(line2_act_humidity - line2_humidity) > config['RS485 Soil Moisture Sensors'].getint('sensor_threshold_moisture')):
+                line2_humidity = line2_act_humidity
+                mqttpublishstring = mqttpublishstatus + "/" + "line2" + "/" + "moisture"
+                mqttclient.publish(mqttpublishstring,line2_humidity)
+        if ('line2_act_temperature' in locals()):
+            if (abs(line2_act_temperature - line2_temperature) > config['RS485 Soil Moisture Sensors'].getfloat('sensor_threshold_temperature')):
+                line2_temperature = line2_act_temperature
+                mqttpublishstring = mqttpublishstatus + "/" + "line2" + "/" + "temperature"
+                mqttclient.publish(mqttpublishstring,line2_temperature)
+
+    if ('address_sensor_3' in config['RS485 Soil Moisture Sensors']):
+        if (config['Simulation Mode'].getboolean('sim_moisture_sensors') == False):
+            print("Reading sensor_line3..." )
+            try:
+                line3_act_humidity = sensor_line3.getMoisture()
+                line3_act_temperature = sensor_line3.getTemperature()
+                print("Moisture line3 =", line3_act_humidity, " Temperature line3 =", line3_act_temperature)
+            except (IOError, ValueError):
+                print("Error reading sensor_line3")
+        else:
+            print("Pretending to read sensor_line3...")
+            line3_act_humidity = random.randrange(200, 300, 1)
+            line3_act_temperature = random.randrange(200, 250, 1) / 10
+        if ('line3_act_humidity' in locals()):
+            if (abs(line3_act_humidity - line3_humidity) > config['RS485 Soil Moisture Sensors'].getint('sensor_threshold_moisture')):
+                line3_humidity = line3_act_humidity
+                mqttpublishstring = mqttpublishstatus + "/" + "line3" + "/" + "moisture"
+                mqttclient.publish(mqttpublishstring,line3_humidity)
+        if ('line3_act_temperature' in locals()):
+            if (abs(line3_act_temperature - line3_temperature) > config['RS485 Soil Moisture Sensors'].getfloat('sensor_threshold_temperature')):
+                line3_temperature = line3_act_temperature
+                mqttpublishstring = mqttpublishstatus + "/" + "line3" + "/" + "temperature"
+                mqttclient.publish(mqttpublishstring,line3_temperature)
 
 
 def mqttconnected(client, userdata, flags, rc):
@@ -253,6 +344,7 @@ def job():
 
 
 
+schedule.every(5).seconds.do(read_moisture_sensors)
 #schedule.every().minute.at(":00").do(irrigationjob)
 #schedule.every().hour.do(job)
 #schedule.every().day.at("10:30").do(job)
