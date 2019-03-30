@@ -111,3 +111,4 @@ pip-selfcheck.json
 *.swp
 .~lock*
 pyvenv.cfg
+snet-sprinkler.conf
