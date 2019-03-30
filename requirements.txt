@@ -3,3 +3,4 @@ smbus2
 chirp_modbus
 schedule
 configparser
+RPi.GPIO

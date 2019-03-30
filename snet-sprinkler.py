@@ -55,6 +55,7 @@ import csv # for importing the mqtt credentials
 import configparser #for reading the configuration file
 import chirp_modbus #for interfacing with the chirp moisture sensors
 import random #for generating arbitrary numbers in sim mode
+import I2C_LCD_driver
 
 config = configparser.ConfigParser()
 config.read('snet-sprinkler.conf')
@@ -75,6 +76,49 @@ if (line3.has_sensor):
 
 if (config['Simulation Mode'].getboolean('sim_relay_board') == False):
     print ("Setting up GPIO pins...")
+    import RPi.GPIO as GPIO
+    GPIO.setmode(GPIO.BCM)
+    line1.relais_gpiopin=config['GPIO Settings'].getint('relais_line1')
+    line2.relais_gpiopin=config['GPIO Settings'].getint('relais_line2')
+    line3.relais_gpiopin=config['GPIO Settings'].getint('relais_line3')
+
+    pushbutton1_gpiopin=config['GPIO Settings'].getint('pushbutton1_in')
+    pushbutton2_gpiopin=config['GPIO Settings'].getint('pushbutton2_in')
+    pushbutton3_gpiopin=config['GPIO Settings'].getint('pushbutton3_in')
+    pushbutton4_gpiopin=config['GPIO Settings'].getint('pushbutton4_in')
+
+    pushbutton1_led_gpiopin=config['GPIO Settings'].getint('pushbutton1_led')
+    pushbutton2_led_gpiopin=config['GPIO Settings'].getint('pushbutton2_led')
+    pushbutton3_led_gpiopin=config['GPIO Settings'].getint('pushbutton3_led')
+    pushbutton4_led_gpiopin=config['GPIO Settings'].getint('pushbutton4_led')
+
+    backlight_gpiopin=config['GPIO Settings'].getint('backlight')
+
+    GPIO.setup(line1.relais_gpiopin, GPIO.OUT)
+    GPIO.setup(line2.relais_gpiopin, GPIO.OUT)
+    GPIO.setup(line3.relais_gpiopin, GPIO.OUT)
+
+    GPIO.setup(pushbutton1_led_gpiopin, GPIO.OUT)
+    GPIO.setup(pushbutton2_led_gpiopin, GPIO.OUT)
+    GPIO.setup(pushbutton3_led_gpiopin, GPIO.OUT)
+    GPIO.setup(pushbutton4_led_gpiopin, GPIO.OUT)
+    GPIO.setup(backlight_gpiopin, GPIO.OUT)
+
+    GPIO.setup(pushbutton1_gpiopin, GPIO.IN)
+    GPIO.setup(pushbutton1_gpiopin, GPIO.IN, pull_up_down = GPIO.PUD_UP)
+    GPIO.setup(pushbutton2_gpiopin, GPIO.IN)
+    GPIO.setup(pushbutton2_gpiopin, GPIO.IN, pull_up_down = GPIO.PUD_UP)
+    GPIO.setup(pushbutton3_gpiopin, GPIO.IN)
+    GPIO.setup(pushbutton3_gpiopin, GPIO.IN, pull_up_down = GPIO.PUD_UP)
+    GPIO.setup(pushbutton4_gpiopin, GPIO.IN)
+    GPIO.setup(pushbutton4_gpiopin, GPIO.IN, pull_up_down = GPIO.PUD_UP)
+
+
+    GPIO.output(line1.relais_gpiopin, GPIO.HIGH)
+    GPIO.output(line2.relais_gpiopin, GPIO.HIGH)
+    GPIO.output(line3.relais_gpiopin, GPIO.HIGH)
+
+    GPIO.output(backlight_gpiopin, GPIO.HIGH)
 else:
     print ("Entering GPIO simulation mode...")
 
@@ -187,11 +231,15 @@ def processchannelsettings(channel, channelsetting, value):
             print("Setting "+line.name+".auto_sensitivity to", value)
             line.auto_sensitivity = int(value)
     elif (channelsetting == "active"):
+        print("lol1")
         if (line.mode == "manu"):
+            print("lol2, value is (%s)", value)
             if (value == "ON"):
+                print("lol3")
                 switch_channel(channel,"ON")
                 todolist_time[channel] = [int(round(time.time() * 1000)), line.manu_irrigationtime*1000, "OFF"]
             elif (value == "OFF"):
+                print("lol4")
                 switch_channel(channel,"OFF")
                 removetodolist_time(channel)
 
@@ -233,15 +281,23 @@ def update_mqtt_status(channel):
 
 
 def switch_channel(channel,state):
-    if (virtualmode == True):
+    if (config['Simulation Mode'].getboolean('sim_relay_board') == True):
         print("Pretending to set channel",channel,"to",state)
-    elif (virtualmode == False):
+    else:
         if (channel=="line1"):
-            print("Setting channel", "1", "to", state)
+            line = line1
         if (channel=="line2"):
-            print("Setting channel", "2", "to", state)
+            line = line2
         if (channel=="line3"):
-            print("Setting channel", "3", "to", state)
+            line = line3
+
+        if (state == "ON"):
+            level = GPIO.LOW
+        elif (state == "OFF"):
+            level = GPIO.HIGH
+
+        print("Setting channel", line.name, "to", state)
+        GPIO.output(line.relais_gpiopin, level)
 
     mqttpublishstring = mqttpublishstatus + "/" + channel + "/" + "active"
     mqttclient.publish(mqttpublishstring,state)
