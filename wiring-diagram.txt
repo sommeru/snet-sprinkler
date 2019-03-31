@@ -1,0 +1,38 @@
+RS485/modbus:
+
+RPi		+5V	RS485-A RS485-B	GND	
+		|	|	|	|
+		red	green	white	blue
+		|	|	|	|
+		red	green	white	blue
+valvebox	red	green	white	blue <-to_boxline2
+		red	green	white	blue
+		|	|	|	|
+boxline1	red	green	white	black
+		red	yellow	blue	black
+		|	|	|	|
+sensor1		VCC	RS485-A RS485-B	GND
+
+		red	green	white	blue  <-to_valvebox
+boxline2	yellow	green	brown	black <-to_boxline3
+		red	yellow	blue	black
+		|	|	|	|
+sensor2		VCC	RS485-A	RS485-B	GND
+
+boxline3	yellow	green	brown	black
+		red	yellow	blue	black
+		|	|	|	|
+sensor2		VCC	RS485-A	RS485-B	GND
+
+
+
+------------------------------------------------
+24VDC sprinkler valve solenoids
+
+RPi		24VAC	line1	line2	line3
+		|	|	|	|
+		red	blue	green	white
+		black	green	yellow  ?
+		|	|	|	|
+solenoids	COMMON	line1	line2	line3
+
