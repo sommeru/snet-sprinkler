@@ -545,7 +545,7 @@ def updatedisplay():
 
     if (displaypage == 2):
         display1 = "{:<14} 2".format(display_ip[:14])
-        display2 = "UPDAT     RECNCT"
+        display2 = "UPDAT          "
         if buttons.b1:
             display_ip = os.popen("/sbin/ifconfig wlan0 | grep 'inet' | egrep -o '([0-9]{1,3}\.){3}[0-9]{1,3}' | head -1").read().rstrip()
             display_ssid = os.popen("/sbin/iwconfig wlan0 | grep 'ESSID' | awk '{print $4}' | awk -F\\\" '{print $2}'").read().rstrip()
@@ -556,10 +556,11 @@ def updatedisplay():
     if (displaypage == 3):
         print("SSiID")
         display1 = "{:<14} 3".format(display_ssid[:14])
-        display2 = "UPDAT     RECNCT"
-        if buttons.b1:
-            display_ip = os.popen("/sbin/ifconfig wlan0 | grep 'inet' | egrep -o '([0-9]{1,3}\.){3}[0-9]{1,3}' | head -1").read().rstrip()
-            display_ssid = os.popen("/sbin/iwconfig wlan0 | grep 'ESSID' | awk '{print $4}' | awk -F\\\" '{print $2}'").read().rstrip()
+        display2 = "          REBOOT"
+        if buttons.b3:
+            os.popen("/sbin/reboot")
+
+
 
     #print("lcd1- ", display1)
     lcd.lcd_display_string(display1, 1)
