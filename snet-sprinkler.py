@@ -344,7 +344,7 @@ def update_mqtt_status(channel):
         value = 0
     elif (line.mode == "semi-auto"):
         value = 1
-    elif (line1.mode == "auto"):
+    elif (line.mode == "auto"):
         value = 2
 
     mqttclient.publish(mqttpublishstring,value)
